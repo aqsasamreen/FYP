@@ -1,0 +1,309 @@
+# -*- coding: utf-8 -*-
+from __future__ import print_function
+import pyodbc
+
+from Tkinter import *
+import Image, ImageTk
+import tkinter as tk
+from tkinter import *
+from PIL import Image, ImageTk
+
+import struct
+from struct import unpack
+import PIL
+from PIL import Image, ImageDraw, ImageColor
+from Tkinter import *
+import Image, ImageTk
+import pyodbc
+import random
+from nltk.corpus import wordnet
+from nltk import pos_tag
+import enchant
+import os
+import re
+
+def update():
+    menu.add_command(label=str(name))
+
+
+window=Tk()
+global retrieve_input
+
+window.title("Front page")
+window.geometry('800x600')
+window.resizable(0, 0)
+frame=Frame(window)
+frame.pack()
+label=Label(frame,text="Enter object name")
+name=StringVar()
+entryname=Text(frame, height=1, width=15,exportselection=0)
+entryname.focus_set()
+menubar = Menu(window)
+menu = Menu(menubar, tearoff=3)
+menu1=Menu(menubar, tearoff=3)
+menu2=Menu(menubar, tearoff=3)
+menubar.add_cascade(label="Recent Words", menu=menu)
+menubar.add_cascade(label="Not available words", menu=menu1)
+menubar.add_cascade(label="Available Words", menu=menu2)
+window.config(menu=menubar)
+btGetname=Button(frame,text="Click Me",command=lambda:retrieve_input())
+btGetname.focus_set()
+#btGetname.bind('<Enter>',lambda :retrieve_input)
+label.grid(row=1,column=1)
+entryname.grid(row=1,column=2,padx=10, pady=10)
+btGetname.grid(row=1,column=3)
+con = pyodbc.connect("DRIVER={SQL Server};server=localhost;database=uff;uid=sa;pwd=11223344")
+cur = con.cursor()
+cur1 = con.cursor()
+
+
+def unpack_drawing(file_handle):
+    key_id, = unpack('Q', file_handle.read(8))
+    countrycode, = unpack('2s', file_handle.read(2))
+    recognized, = unpack('b', file_handle.read(1))
+    timestamp, = unpack('I', file_handle.read(4))
+    n_strokes, = unpack('H', file_handle.read(2))
+    image = []
+    global x;
+    global y;
+    for i in range(n_strokes):
+        n_points, = unpack('H', file_handle.read(2))
+        fmt = str(n_points) + 'B'
+        x = unpack(fmt, file_handle.read(n_points))
+        y = unpack(fmt, file_handle.read(n_points))
+        image.append((x, y))
+
+    return {
+
+        'key_id': key_id,
+        'countrycode': countrycode,
+        'recognized': recognized,
+        'timestamp': timestamp,
+        'image': image
+
+    }
+
+
+def unpack_drawings(filename):
+    with open(filename, 'rb') as f:
+        for i in range(1000):
+            try:
+                yield unpack_drawing(f)
+            except struct.error:
+                break
+
+
+
+
+
+
+global name
+global list2
+list2=[]
+def retrieve_input():
+    inputValue = entryname.get("1.0", "end-1c")
+    #print(type(inputValue))
+    name3 = entryname.get("1.0","end-1c");
+    #print (type(name3))
+    name2 = str(name3);
+
+    name = name2.encode('utf-8')
+
+    print (name)
+    words=[]
+    token = []
+    token = name.split();
+    d = enchant.Dict("en_us")
+
+    global var1
+    var1 = StringVar()
+    for i in range(len(token)):
+        var = StringVar()
+
+
+
+
+    def clear():
+        list1=window.place_slaves()
+        for l in list1:
+            l.destroy()
+    string="";
+    if(len(name)==0):
+        l = Label(window, textvariable=var1, font=("Arial", 13), fg="Red")
+        var1.set("Please Write a Word in Text Box")
+        l.place(x=260, y=50)
+    else:
+        if (d.check(token[0]) == False):
+                label = Label(window, textvariable=var, font=("Arial", 13), fg="Blue")
+                text=  d.suggest(token[0])
+                print (text)
+                is_noun = lambda pos: pos[:2] == 'NN'
+                nouns = [word for (word, pos) in pos_tag(text) if is_noun(pos)]
+
+                var.set("Did you Mean : "+str(nouns))
+                label.place(x=200,y=50)
+        else:
+
+            clear()
+            synonyms = []
+            antonyms = []
+
+        for syn in wordnet.synsets(token[0]):
+          for l in syn.lemmas():
+                synonyms.append(str(l.name()).encode('utf-8'))
+
+                if l.antonyms():
+                    antonyms.append(str(l.antonyms()[0].name()).encode('utf-8'))
+        #print(synonyms)
+
+
+          string=''
+
+          list=[]
+          files = []
+          for i in os.listdir("D:\pycharm\Images"):
+              if i.endswith('.bin'):
+                  i = i[:-4]
+                  files.append((i))
+        #############compare Two lists############
+
+          for i in range(len(synonyms)):
+            for j in range(len(files)):
+                if (synonyms[i] == files[j]):
+                    list.append(files[j])
+
+        #print(files)
+
+        #print (synonyms)
+        if list:
+            string = list[0]
+            menu2.add_command(label=string)
+        else:
+            menu1.add_cascade(label=name)
+            l = Label(window, textvariable=var1, font=("Arial", 20), fg="Red")
+            var1.set("No content is avaliable")
+            l.place(x=250, y=250)
+
+        #print(string.definition());
+        menu.add_cascade(label=name)
+        sql1 = "SELECT Path from uff where Name like '" + string + "'"
+        print(cur1.execute(sql1))
+
+        if cur1.rowcount:
+
+          row1 = str(cur1.fetchone()[0].decode('utf8'))
+          print (row1)
+          new = []
+          my_randoms = []
+          for i in range(9):
+            my_randoms.append(random.randrange(0, 1000, 1))
+          print (my_randoms)
+          label1 = "label" + str(1)
+
+          for drawing in unpack_drawings(row1):
+            image = drawing['image']
+            new.append(image)
+
+          for s in range(len(my_randoms)):
+            output = []
+            stroke = 0
+            list1 = []
+            l1 = []
+            l2 = []
+
+            for stroke in new[my_randoms[s]]:
+                list1 = stroke
+                l1 = list1[0]
+                l2 = list1[1]
+                for a in range(len(l1)):
+                    output.append((l1[a], l2[a]))
+                img1 = Image.new('RGBA', (300, 300), 'white')
+                draw = ImageDraw.Draw(img1)
+                draw.line(output, fill='Black', width=5)
+                img1.save('drawing1.png')
+                img1 = Image.open('D:\pycharm\drawing1.png')
+                basewidth = 200
+                wpercent = (basewidth / float(img1.size[0]))
+                hsize = int((float(img1.size[1]) * float(wpercent)))
+                img1 = img1.resize((basewidth, hsize), PIL.Image.ANTIALIAS)
+                img1.save('resized_image.jpg')
+                photo1 = ImageTk.PhotoImage(img1)
+            if (s == 0):
+                l = "label" + str(s)
+                label = l;
+                label = Label(image=photo1, bg="black", fg="white")
+                label.image = photo1  # keeping refrence
+
+                label.place(x=0, y=150)
+
+            if (s == 1):
+                l = "label" + str(s)
+                label = l;
+                label = Label(image=photo1, bg="black", fg="white")
+                label.image = photo1  # keeping refrence
+
+                label.place(x=200, y=150)
+
+            if (s == 2):
+                l = "label" + str(s)
+                label = l;
+                label = Label(image=photo1, bg="black", fg="white")
+                label.image = photo1  # keeping refrence
+
+                label.place(x=400, y=150)
+
+            if (s == 3):
+                l = "label" + str(s)
+                label = l;
+                label = Label(image=photo1, bg="black", fg="white")
+                label.image = photo1  # keeping refrence
+
+                label.place(x=600, y=150)
+
+            if (s == 4):
+                l = "label" + str(s)
+                label = l;
+                label = Label(image=photo1, bg="black", fg="white")
+                label.image = photo1  # keeping refrence
+
+                label.place(x=0, y=350)
+
+            if (s == 5):
+                l = "label" + str(s)
+                label = l;
+                label = Label(image=photo1, bg="black", fg="white")
+                label.image = photo1  # keeping refrence
+
+                label.place(x=200, y=350)
+
+            if (s == 6):
+                l = "label" + str(s)
+                label = l;
+                label = Label(image=photo1, bg="black", fg="white")
+                label.image = photo1  # keeping refrence
+
+                label.place(x=400, y=350)
+
+            if (s == 7):
+                l = "label" + str(s)
+                label = l;
+                label = Label(image=photo1, bg="black", fg="white")
+                label.image = photo1  # keeping refrence
+
+                label.place(x=600, y=350)
+        else:
+
+            l = Label(window, textvariable=var1, font=("Arial", 20), fg="Red")
+            var1.set("No content is avaliable")
+            l.place(x=250, y=250)
+
+
+
+
+
+window.mainloop()
+
+
+
+
+
